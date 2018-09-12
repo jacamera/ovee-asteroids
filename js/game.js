@@ -208,14 +208,7 @@ function draw() {
         }
 
         drawHighScores();
-
-        if (!highScorePromptDisplayed) {
-          // p5 draws to the canvas asynchronously so we're using setTimeout to delay
-          // showing the prompt so that the high scores get drawn first
-          window.setTimeout(promptForHighScore, 500);
-          // record that we scheduled the prompt so that it doesn't happen again
-          highScorePromptDisplayed = true;
-        }
+        drawHighScorePrompt();
       }
       else if (state === 3){
         fill(255);
@@ -238,6 +231,7 @@ function draw() {
         }
 
         drawHighScores();
+        drawHighScorePrompt();
       }
 }
 
@@ -413,6 +407,18 @@ function restart(){
 function cacheHighScores(highScores) {
   // sort the entries from hightest to lowest score
   highScoreCache = highScores.sort((a, b) => b.score - a.score);
+}
+
+// helper function to prompt for the high score that is meant
+// to be called from the draw loop
+function drawHighScorePrompt() {
+  if (!highScorePromptDisplayed) {
+    // p5 draws to the canvas asynchronously so we're using setTimeout to delay
+    // showing the prompt so that the high scores get drawn first
+    window.setTimeout(promptForHighScore, 500);
+    // record that we scheduled the prompt so that it doesn't happen again
+    highScorePromptDisplayed = true;
+  }
 }
 
 // draw the high scores to the canvas. safe to be called from
