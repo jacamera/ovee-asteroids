@@ -61,6 +61,8 @@ function preload(){
 function setup() {
     w= windowWidth;
     h = windowHeight;
+    
+    createCanvas(w, h);
 
     ship = createSprite(w/2, h/2);
     ship.maxSpeed = 6;
@@ -86,7 +88,6 @@ function setup() {
 
 var interval = 200;
 function draw() {
-      createCanvas(w, h);
       w = windowWidth;
       h = windowHeight;
 
