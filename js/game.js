@@ -30,6 +30,11 @@ var laser, boo, yay;
 
 var introImage1, introImage2;
 
+// high score global variables
+var highScoreLocalStorageKey = 'highScores';
+var highScoreCache;
+var highScorePromptDisplayed = false;
+
 function preload(){
   laser = loadSound("assets/gameAssets/laser.wav");
   for (var i = 0; i< 10; i++){
@@ -61,7 +66,7 @@ function preload(){
 function setup() {
     w= windowWidth;
     h = windowHeight;
-    
+
     createCanvas(w, h);
 
     ship = createSprite(w/2, h/2);
@@ -186,8 +191,8 @@ function draw() {
         fill(255);
         textAlign(CENTER);
         textSize(32);
-        text("you had " + score + " wins!", 0, h*.35, w,h)
-        text("Keep fighting the good fight", 0, h*.5, w, h);
+        text("you had " + score + " wins!", 0, h*.15, w,h)
+        text("Keep fighting the good fight", 0, h*.35, w, h);
         // var button;
         // button = createButton("Stay informed! Read more about what's happening in women's health");
         // button.position(w*.2, h*.6);
@@ -196,18 +201,28 @@ function draw() {
         var opacity = map(pulse, -1, 1, 0, 255);
         fill(255, opacity);
         textSize(18);
-        text("press SPACE to play again", w/2, h*.8);
+        text("press SPACE to play again", w/2, h*.85);
 
         if(keyWentDown("SPACE")){
           restart();
+        }
+
+        drawHighScores();
+
+        if (!highScorePromptDisplayed) {
+          // p5 draws to the canvas asynchronously so we're using setTimeout to delay
+          // showing the prompt so that the high scores get drawn first
+          window.setTimeout(promptForHighScore, 500);
+          // record that we scheduled the prompt so that it doesn't happen again
+          highScorePromptDisplayed = true;
         }
       }
       else if (state === 3){
         fill(255);
         textAlign(CENTER);
         textSize(32);
-        text("you let the haters get the best of you :(", 0, h*.35, w,h);
-        text("Keep fighting the good fight",0, h*.5, w, h);
+        text("you let the haters get the best of you :(", 0, h*.15, w,h);
+        text("Keep fighting the good fight",0, h*.35, w, h);
         // var button;
         // button = createButton("Stay informed! Read more about what's happening in women's health");
         // button.position(w/2, h*.6);
@@ -216,11 +231,13 @@ function draw() {
         var pulse = int(sin(frameCount/10)*1.5);
         var opacity = map(pulse, -1, 1, 0, 255);
         fill(255, opacity);
-        text("press SPACE to play again", w/2, h*.8);
+        text("press SPACE to play again", w/2, h*.85);
 
         if(keyWentDown("SPACE")){
           restart();
         }
+
+        drawHighScores();
       }
 }
 
@@ -388,4 +405,68 @@ function createBad(type, x, y, speed, rotation){
 
 function restart(){
   location.reload();
+}
+
+// store the sorted high scores in a local variable so that
+// we don't have to retrieve them from localStorage and sort
+// them in the draw loop
+function cacheHighScores(highScores) {
+  // sort the entries from hightest to lowest score
+  highScoreCache = highScores.sort((a, b) => b.score - a.score);
+}
+
+// draw the high scores to the canvas. safe to be called from
+// within the draw loop
+function drawHighScores() {
+  // first check the cache to see if it's been populated
+  if (!highScoreCache) {
+    // if it's empty fill it with the entries from localStorage
+    cacheHighScores(readHighScores());
+  }
+  fill(255);
+  textSize(22);
+  text('High Scores:', 0, h * 0.525, w, h);
+  textSize(20);
+  // take the top 5 scores and draw them to the screen
+  highScoreCache
+    .slice(0, 5)
+    .forEach((entry, index) => {
+      text(entry.userName + ': ' + entry.score, 0, (h * 0.575) + (25 * index), w, h);
+    });
+}
+
+// prompt the user to enter their name to save their high score
+function promptForHighScore() {
+  // quick and dirty solution using window.prompt. could be replaced with a
+  // much nicer user interface
+  var userName = window.prompt('Enter your name to record your high score');
+  // userName might be undefined so coalesce to an empty string and then call
+  // trim to make sure the user didn't just enter empty space characters
+  if ((userName || '').trim()) {
+    // load the entries from localStorage
+    var highScores = readHighScores();
+    // add the new entry
+    highScores.push({
+      userName: userName,
+      score: score,
+      timestamp: Date.now()
+    });
+    // save the updated entries back to localStorage. only strings can be saved
+    // to localStorage so we have to serialize the array into a JSON string
+    window.localStorage.setItem(highScoreLocalStorageKey, JSON.stringify(highScores));
+    // update the cache with the new entries
+    cacheHighScores(highScores);
+  }
+}
+
+// read the high score entries from localStorage
+function readHighScores() {
+  var storageItem = window.localStorage.getItem(highScoreLocalStorageKey);
+  // check first if we have a value. localStorage could get cleared at any time
+  if (storageItem) {
+    // return the parsed result if there was a value
+    return JSON.parse(storageItem);
+  }
+  // return an empty array if there was nothing in localStorage
+  return [];
 }
