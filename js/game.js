@@ -34,6 +34,7 @@ var introImage1, introImage2;
 var highScoreLocalStorageKey = 'highScores';
 var highScoreCache;
 var highScorePromptDisplayed = false;
+var highScoreDisplayCount = 5;
 
 function preload(){
   laser = loadSound("assets/gameAssets/laser.wav");
@@ -405,17 +406,26 @@ function restart(){
 // we don't have to retrieve them from localStorage and sort
 // them in the draw loop
 function cacheHighScores(highScores) {
-  // sort the entries from hightest to lowest score
-  highScoreCache = highScores.sort((a, b) => b.score - a.score);
+  highScoreCache = sortHighScores(highScores);
 }
 
 // helper function to prompt for the high score that is meant
 // to be called from the draw loop
 function drawHighScorePrompt() {
   if (!highScorePromptDisplayed) {
-    // p5 draws to the canvas asynchronously so we're using setTimeout to delay
-    // showing the prompt so that the high scores get drawn first
-    window.setTimeout(promptForHighScore, 500);
+    // only show the prompt if the current score is greater than the others
+    var topScores = sortHighScores(readHighScores()).slice(0, highScoreDisplayCount);
+    if (
+      score > 0 &&
+      (
+        topScores.length < highScoreDisplayCount ||
+        topScores.some(entry => score > entry.score)
+      )
+    ) {
+      // p5 draws to the canvas asynchronously so we're using setTimeout to delay
+      // showing the prompt so that the high scores get drawn first
+      window.setTimeout(promptForHighScore, 500);
+    }
     // record that we scheduled the prompt so that it doesn't happen again
     highScorePromptDisplayed = true;
   }
@@ -433,9 +443,9 @@ function drawHighScores() {
   textSize(22);
   text('High Scores:', 0, h * 0.525, w, h);
   textSize(20);
-  // take the top 5 scores and draw them to the screen
+  // take the top scores and draw them to the screen
   highScoreCache
-    .slice(0, 5)
+    .slice(0, highScoreDisplayCount)
     .forEach((entry, index) => {
       text(entry.userName + ': ' + entry.score, 0, (h * 0.575) + (25 * index), w, h);
     });
@@ -475,4 +485,9 @@ function readHighScores() {
   }
   // return an empty array if there was nothing in localStorage
   return [];
+}
+
+// sort the entries from hightest to lowest score
+function sortHighScores(highScores) {
+  return highScores.sort((a, b) => b.score - a.score);
 }
