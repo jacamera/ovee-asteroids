@@ -201,9 +201,9 @@ function draw() {
         var opacity = map(pulse, -1, 1, 0, 255);
         fill(255, opacity);
         textSize(18);
-        text("press SPACE to play again", w/2, h*.85);
+        text("press ENTER to play again", w/2, h*.85);
 
-        if(keyWentDown("SPACE")){
+        if(keyWentDown("ENTER")){
           restart();
         }
 
@@ -231,9 +231,9 @@ function draw() {
         var pulse = int(sin(frameCount/10)*1.5);
         var opacity = map(pulse, -1, 1, 0, 255);
         fill(255, opacity);
-        text("press SPACE to play again", w/2, h*.85);
+        text("press ENTER to play again", w/2, h*.85);
 
-        if(keyWentDown("SPACE")){
+        if(keyWentDown("ENTER")){
           restart();
         }
 
