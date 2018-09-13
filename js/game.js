@@ -31,8 +31,7 @@ var laser, boo, yay;
 var introImage1, introImage2;
 
 // high score global variables
-var highScoreLocalStorageKey = 'highScores';
-var highScoreCache;
+var highScores;
 var highScorePromptDisplayed = false;
 var highScoreDisplayCount = 5;
 
@@ -402,19 +401,65 @@ function restart(){
   location.reload();
 }
 
-// store the sorted high scores in a local variable so that
-// we don't have to retrieve them from localStorage and sort
-// them in the draw loop
-function cacheHighScores(highScores) {
-  highScoreCache = sortHighScores(highScores);
-}
+// high score storage interface. abstracts away the localStorage
+// reading/writing and caching and provides a simple api for the
+// rest of the game code. using an immediately-invoked function
+// expression allows us to hide the implementation details and
+// local variables from the rest of the code.
+highScores = (function () {
+  // the key used to read from and write to localStorage
+  var storageKey = 'highScores';
+  // cache the sorted high scores in a local variable so that
+  // we don't have to retrieve them from localStorage and sort
+  // them every time they're requested
+  var cache;
+  // cache entries sorted from highest to lowest score
+  function cacheScores(scores) {
+    cache = scores.sort((a, b) => b.score - a.score);
+  }
+  // read the high scores from localStorage
+  function readScores() {
+    // attempt to read the value from storage
+    var storageItem = window.localStorage.getItem(storageKey);
+    // check first if we have a value. localStorage could get cleared at any time
+    if (storageItem) {
+      // return the parsed result
+      return JSON.parse(storageItem);
+    }
+    // return an empty array if there was nothing in localStorage
+    return [];
+  }
+  // populate the cache
+  cacheScores(readScores());
+  // return the public interface
+  return {
+    getTop: function (count) {
+      return cache.slice(0, count);
+    },
+    save: function (userName, score) {
+      // load the entries from localStorage
+      var scores = readScores();
+      // add the new entry
+      scores.push({
+        userName: userName,
+        score: score,
+        timestamp: Date.now()
+      });
+      // save the updated entries back to localStorage. only strings can be saved
+      // to localStorage so we have to serialize the array into a JSON string
+      window.localStorage.setItem(storageKey, JSON.stringify(scores));
+      // update the cache with the new entries
+      cacheScores(scores);
+    }
+  };
+})();
 
 // helper function to prompt for the high score that is meant
 // to be called from the draw loop
 function drawHighScorePrompt() {
   if (!highScorePromptDisplayed) {
     // only show the prompt if the current score is greater than the others
-    var topScores = sortHighScores(readHighScores()).slice(0, highScoreDisplayCount);
+    var topScores = highScores.getTop(highScoreDisplayCount);
     if (
       score > 0 &&
       (
@@ -434,18 +479,13 @@ function drawHighScorePrompt() {
 // draw the high scores to the canvas. safe to be called from
 // within the draw loop
 function drawHighScores() {
-  // first check the cache to see if it's been populated
-  if (!highScoreCache) {
-    // if it's empty fill it with the entries from localStorage
-    cacheHighScores(readHighScores());
-  }
   fill(255);
   textSize(22);
   text('High Scores:', 0, h * 0.525, w, h);
   textSize(20);
   // take the top scores and draw them to the screen
-  highScoreCache
-    .slice(0, highScoreDisplayCount)
+  highScores
+    .getTop(highScoreDisplayCount)
     .forEach((entry, index) => {
       text(entry.userName + ': ' + entry.score, 0, (h * 0.575) + (25 * index), w, h);
     });
@@ -459,35 +499,7 @@ function promptForHighScore() {
   // userName might be undefined so coalesce to an empty string and then call
   // trim to make sure the user didn't just enter empty space characters
   if ((userName || '').trim()) {
-    // load the entries from localStorage
-    var highScores = readHighScores();
-    // add the new entry
-    highScores.push({
-      userName: userName,
-      score: score,
-      timestamp: Date.now()
-    });
-    // save the updated entries back to localStorage. only strings can be saved
-    // to localStorage so we have to serialize the array into a JSON string
-    window.localStorage.setItem(highScoreLocalStorageKey, JSON.stringify(highScores));
-    // update the cache with the new entries
-    cacheHighScores(highScores);
+    // save the new entry
+    highScores.save(userName, score);
   }
-}
-
-// read the high score entries from localStorage
-function readHighScores() {
-  var storageItem = window.localStorage.getItem(highScoreLocalStorageKey);
-  // check first if we have a value. localStorage could get cleared at any time
-  if (storageItem) {
-    // return the parsed result if there was a value
-    return JSON.parse(storageItem);
-  }
-  // return an empty array if there was nothing in localStorage
-  return [];
-}
-
-// sort the entries from hightest to lowest score
-function sortHighScores(highScores) {
-  return highScores.sort((a, b) => b.score - a.score);
 }
